@@ -9,15 +9,31 @@ import time
 
 
 try:
-    autocast = torch.cuda.amp.autocast
-except:
+    # Use the new AMP API to avoid FutureWarning from `torch.cuda.amp.autocast`.
+    _autocast = torch.amp.autocast
+
     class autocast:
-        def __init__(self, enabled):
-            pass
+        def __init__(self, enabled=True, dtype=None):
+            self._ctx = _autocast("cuda", enabled=enabled, dtype=dtype)
+
         def __enter__(self):
-            pass
+            return self._ctx.__enter__()
+
         def __exit__(self, *args):
-            pass
+            return self._ctx.__exit__(*args)
+except Exception:
+    try:
+        autocast = torch.cuda.amp.autocast
+    except Exception:
+        class autocast:
+            def __init__(self, enabled=True, dtype=None):
+                pass
+
+            def __enter__(self):
+                pass
+
+            def __exit__(self, *args):
+                pass
 
 class hourglass(nn.Module):
     def __init__(self, in_channels):
