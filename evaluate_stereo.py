@@ -48,8 +48,9 @@ def validate_eth3d(model, iters=32, mixed_prec=False):
         occ_mask = Image.open(GT_file.replace('disp0GT.pfm', 'mask0nocc.png'))
 
         occ_mask = np.ascontiguousarray(occ_mask).flatten()
-
-        val = (valid_gt.flatten() >= 0.5) & (occ_mask == 255)
+        # Ensure the indexing mask is a boolean tensor (PyTorch warns on uint8 masks).
+        occ_mask_t = torch.as_tensor(occ_mask == 255, device=valid_gt.device, dtype=torch.bool)
+        val = (valid_gt.flatten() >= 0.5) & occ_mask_t
         # val = (valid_gt.flatten() >= 0.5)
         out = (epe_flattened > 1.0)
         image_out = out[val].float().mean().item()
@@ -99,6 +100,7 @@ def validate_kitti(model, iters=32, mixed_prec=False):
 
         epe_flattened = epe.flatten()
         val = (valid_gt.flatten() >= 0.5) & (flow_gt.abs().flatten() < 192)
+        val = val.to(torch.bool)
         # val = valid_gt.flatten() >= 0.5
 
         out = (epe_flattened > 3.0)

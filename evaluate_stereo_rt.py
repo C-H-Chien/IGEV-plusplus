@@ -48,8 +48,9 @@ def validate_eth3d(model, iters=32, mixed_prec=False):
         occ_mask = Image.open(GT_file.replace('disp0GT.pfm', 'mask0nocc.png'))
 
         occ_mask = np.ascontiguousarray(occ_mask).flatten()
-
-        val = (valid_gt.flatten() >= 0.5) & (occ_mask == 255)
+        # Ensure the indexing mask is boolean
+        occ_mask_t = torch.as_tensor(occ_mask == 255, device=valid_gt.device, dtype=torch.bool)
+        val = (valid_gt.flatten() >= 0.5) & occ_mask_t
         # val = (valid_gt.flatten() >= 0.5)
         out = (epe_flattened > 1.0)
         image_out = out[val].float().mean().item()
@@ -99,6 +100,7 @@ def validate_kitti(model, iters=32, mixed_prec=False):
 
         epe_flattened = epe.flatten()
         val = (valid_gt.flatten() >= 0.5) & (flow_gt.abs().flatten() < 192)
+        val = val.to(torch.bool)
         # val = valid_gt.flatten() >= 0.5
 
         out = (epe_flattened > 3.0)
@@ -147,6 +149,7 @@ def validate_sceneflow(model, iters=32, mixed_prec=False):
 
         epe = epe.flatten()
         val = (valid_gt.flatten() >= 0.5) & (disp_gt.abs().flatten() < 192)
+        val = val.to(torch.bool)
         if(np.isnan(epe[val].mean().item())):
             continue
 
@@ -191,7 +194,8 @@ def validate_middlebury(model, iters=32, split='MiddEval3', resolution='F', mixe
 
         occ_mask = Image.open(imageL_file.replace('im0.png', 'mask0nocc.png')).convert('L')
         occ_mask = np.ascontiguousarray(occ_mask, dtype=np.float32).flatten()
-        val = (valid_gt.reshape(-1) >= 0.5) & (flow_gt[0].reshape(-1) < 192) & (occ_mask==255)
+        occ_mask_t = torch.as_tensor(occ_mask == 255, device=valid_gt.device, dtype=torch.bool)
+        val = (valid_gt.reshape(-1) >= 0.5) & (flow_gt[0].reshape(-1) < 192) & occ_mask_t
         out = (epe_flattened > 2.0)
         image_out = out[val].float().mean().item()
         image_epe = epe_flattened[val].mean().item()
