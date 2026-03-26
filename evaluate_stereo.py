@@ -245,7 +245,12 @@ if __name__ == '__main__':
     if args.restore_ckpt is not None:
         assert args.restore_ckpt.endswith(".pth")
         logging.info("Loading checkpoint...")
-        checkpoint = torch.load(args.restore_ckpt)
+        # checkpoints here are expected to be `state_dict` only (see train scripts)
+        try:
+            checkpoint = torch.load(args.restore_ckpt, weights_only=True)
+        except TypeError:
+            # Fall-back to older PyTorch versions that may not have the `weights_only` argument.
+            checkpoint = torch.load(args.restore_ckpt)
         model.load_state_dict(checkpoint, strict=True)
         logging.info(f"Done loading checkpoint")
 
